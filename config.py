@@ -1,33 +1,20 @@
-from aiogram import Bot, Dispatcher, types
+import re
+from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage    
-from langdetect import detect
+
+url = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
+token = '902129e7249af3da7aa46056dd2211f02ca19f13'
+
+headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': 'Token 902129e7249af3da7aa46056dd2211f02ca19f13'
+}
 
 
-bot = Bot(token = 'Ваш токен')
+
+bot = Bot(token = '6016862759:AAHTnhgyT6bCpaiMgRaOo-FrKW3n5Phvq1o')
 dp = Dispatcher(bot, storage = MemoryStorage())
 
-def check_language(text):
-    try:
-        language = detect(text)
-        if language == 'ru':
-            return True
-        else:
-            return False
-    except:
-        return False
 
-def check_language_english(text):
-    try:
-        language = detect(text)
-        if language == 'en':
-            return True
-        else:
-            return False
-    except:
-        return False
-
-def check_alpha_only(text):
-    if text.isalpha():
-        return True
-    else:
-        return False
+rest_api = 'http://193.233.233.66:8000/'

@@ -1,12 +1,11 @@
 FROM python:3.10
 
-WORKDIR /fanat_kg
+WORKDIR /app
 
 COPY req.txt ./
+
+RUN pip install --upgrade pip
+
 RUN pip install --no-cache-dir -r req.txt
 
 COPY . .
-
-CMD [ "python", "main.py" ]
-
-
