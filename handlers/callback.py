@@ -113,7 +113,8 @@ class HandleMessage:
     
 
 
-
+    async def support(self, message: types.Message):
+        await bot.send_message(chat_id=message.from_user.id, text='Поддержка - https://t.me/krechmert', reply_markup=get_keyboard('user'))
 
     
         

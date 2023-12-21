@@ -30,6 +30,10 @@ def get_keyboard(name: str, flag: bool = False,):
 
         keyboard.add(KeyboardButton('Назад'))
 
+    elif name == 'back_user':
+        keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard.add(KeyboardButton('Назад'))
+
         
     elif name == 'uk':
         keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -107,3 +111,17 @@ def addres_kb(name: str, user_id):
 
     return keyboard
         
+
+
+def time_uk(name: str):
+    if name == 'time':
+        keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard.add('00:00', '01:00', '02:00')
+        keyboard.add('03:00', '04:00', '05:00')
+        keyboard.add('06:00', '07:00', '08:00')
+        keyboard.add('09:00', '10:00', '11:00')
+        keyboard.add('12:00', '13:00', '14:00')
+        keyboard.add('15:00', '16:00', '17:00')
+        keyboard.add('18:00', '19:00', '20:00')
+        keyboard.add('21:00', '22:00', '23:00')
+    return keyboard

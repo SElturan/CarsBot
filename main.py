@@ -11,6 +11,7 @@ from aiogram.dispatcher import FSMContext
 
 
 
+
 class BotMain:
     def __init__(self):
         dp.register_message_handler(self.handle_commands, commands=['start','help','open'])
@@ -38,7 +39,7 @@ class BotMain:
                 else:
                     await message.answer('Вы зарегистрированы как пользователь', reply_markup=get_keyboard('user'))
             else:
-                await message.answer('Вы не зарегистрированы\nПройдите регистрацию', reply_markup=get_keyboard('start'))
+                await message.answer('Здравствуйте! Я телеграмм бот, которые поможет вам отправлять сообщения по номеру автомобиля. Зарегистрируйте', reply_markup=get_keyboard('start'))
 
 
             
@@ -75,7 +76,7 @@ class BotMain:
 
 
         elif message.text == '📍 Тех.поддержка':
-            await message.answer('Тех.поддержка')
+            await handle_message.support(message)
 
         elif message.text == 'Удалить номер':
            await handle_message.delete_num(message)

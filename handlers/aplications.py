@@ -96,19 +96,27 @@ class Applications:
                     # Если номер соответствует формату, то заменяем буквы на русские символы
                     car_num = car_num.replace('A', 'А').replace('B', 'В').replace('E', 'Е').replace('K', 'К').replace('M', 'М').replace('H', 'Н').replace('O', 'О').replace('P', 'Р').replace('C', 'С').replace('T', 'Т').replace('Y', 'У').replace('X', 'Х').replace('S', 'C').replace('Y', 'У').replace('RUS', '')
     
+                    check_number = await get_number_car(message.from_user.id) 
+                    if check_number:
+                        data_car = {
+                        "user_id": message.from_user.id,
+                        "car_num": car_num
+                        }
+                    else:
+                        data_car = {
+                        "user_id": message.from_user.id,
+                        "car_num": car_num,
+                        "default_num": True
+                        }
 
-                    data_car = {
-                    "user_id": message.from_user.id,
-                    "car_num": car_num
-                }
                     success = await add_num_car(data_car)
                     if success:
                         await message.answer('Вы успешно добавили номер', reply_markup=get_keyboard('user'))
                     else:
                         await message.answer('Вы добавили уже 3 номера', reply_markup=get_keyboard('user'))
                 else:
-                    await message.answer('Вы ввели некорректный номер. Номер автомобиля России должен иметь формат "A000AA00" или "000AA000", где "A" - это буквы русского алфавита, "0" - цифры. Без RUS', reply_markup=get_keyboard('user'))
-                    
+                    await message.answer('Вы ввели некорректный номер. Номер автомобиля России должен иметь формат "A000AA00" или "000AA000", где "A" - это буквы русского алфавита, "0" - цифры. Без RUS', reply_markup=get_keyboard('back_user'))
+                    return
           
                 await state.finish()
 
@@ -256,7 +264,6 @@ class Applications:
         class AplicationsFSM(StatesGroup):
             car_num = State()
             message_text = State()
-            car_num_user = State()
 
        
         await AplicationsFSM.car_num.set()
@@ -284,31 +291,18 @@ class Applications:
         async def message_text(message: types.Message, state: FSMContext):   
             async with state.proxy() as data:
                 data['message_text'] = message.text
-         
-            await message.answer('Введите номер машины от которого хотите отправить сообщение', reply_markup=addres_kb('car_number', user_id=user_id))
-            
-            await AplicationsFSM.next()
 
-                
-        
-        
-        @dp.message_handler(state=AplicationsFSM.car_num_user)
-        async def car_num_user(message: types.Message, state: FSMContext):
-            async with state.proxy() as data:
-                data['car_num_user'] = message.text
-                car_num_user = data['car_num_user']
-                car_num_user = car_num_user.upper()
-                car_num_user = car_num_user.replace('A', 'А').replace('B', 'В').replace('E', 'Е').replace('K', 'К').replace('M', 'М').replace('H', 'Н').replace('O', 'О').replace('P', 'Р').replace('C', 'С').replace('T', 'Т').replace('Y', 'У').replace('X', 'Х').replace('S', 'C').replace('Y', 'У').replace('RUS', '')
-                data['car_num_user'] = car_num_user
-            user_car_num = message.from_user.id
-            chekc_car_number = await get_number_car_check(user_car_num, car_num_user)
-            if not chekc_car_number:
-                await message.answer('У вас нет такого номера', reply_markup=markup)
-                await state.finish()
-            else:
                 messages = data['message_text']
                 car_num = data['car_num']
-                message_text = f'ОТ НОМЕРА: {car_num_user}\nДЛЯ НОМЕРА: {car_num}\n\nСообщение:\n{messages}'
+                user_id = message.from_user.id
+                default_number = await get_number_car_default(user_id)
+                
+                if default_number:
+                    default_number = ''.join(default_number)
+                    car_user = f'ОТ НОМЕРА: {default_number}'
+                else:
+                    car_user = f'ОТ ПОЛЬЗОВАТЕЛЯ: {message.from_user.first_name}'
+                message_text = f'{car_user}\nДЛЯ НОМЕРА: {car_num}\n\nСообщение:\n{messages}'
 
                 msg_id = await message_car_num(car_num)
                 if msg_id:

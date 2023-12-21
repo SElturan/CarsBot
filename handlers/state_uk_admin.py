@@ -4,19 +4,11 @@ from aiogram.dispatcher import FSMContext
 from config import dp, bot
 from aiogram import types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-from keyboards.keyboard import get_keyboard, addres_kb
+from keyboards.keyboard import get_keyboard, addres_kb,time_uk
 from handlers.base import *
 from handlers.base_uk_admin import *
 from config import url, headers
 from datetime import datetime
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-# создаем экземпляр планировщика задач
-scheduler = AsyncIOScheduler()
-
-# запускаем планировщик задач
-scheduler.start()
-
 
 
 class HandleMessageUkState:
@@ -25,15 +17,24 @@ class HandleMessageUkState:
 
         
 
-    async def mailing_address_state(self, message: types.Message):
+    async def mailing_address_state(self, message: types.Message, state='*'):
+
         class MailingAddressState(StatesGroup):
             address = State()
-            message_text= State()
-            date = State()
+            message_text = State()
+            start_time = State()
+            end_time = State()
             
         user_id = message.from_user.id
-        await message.answer('Выберете адресс по которому хотите отправить сообщение', reply_markup=addres_kb('list_address_uk', user_id))
-        await MailingAddressState.address.set()
+        try:
+            await message.answer('Выберете адресс по которому хотите отправить сообщение', reply_markup=addres_kb('list_address_uk', user_id))
+            await MailingAddressState.address.set()
+        except IndexError:
+            await message.answer('У вас нет адресов', reply_markup=get_keyboard('uk'))
+            
+            
+
+        
 
         @dp.message_handler(state=MailingAddressState.address)
         async def city(message: types.Message, state: FSMContext):
@@ -41,83 +42,88 @@ class HandleMessageUkState:
                 data['address'] = message.text
                 user_id = message.from_user.id
                 street = data['address']
-                street_parts = street.split(',')
-                street_name = street_parts[0] 
-                house_number = street_parts[1]
-                msg_id = await message_street(user_id,street_name,house_number)
-                if msg_id:
-                    await message.answer('Введите сообщение которое хотите отправить', reply_markup=get_keyboard('uk_template'))
-                    await MailingAddressState.next()
-                else:
-                    await message.answer('По данному адресу нет пользователей или же у вас нет доступа на этот адрес', reply_markup=get_keyboard('uk'))
-                    await state.finish()
+                try:
+
+                    street_parts = street.split(',')
+                    street_name = street_parts[0] 
+                    house_number = street_parts[1]
+                    msg_id = await message_street(user_id,street_name,house_number)
+                    if msg_id:
+                        await message.answer('Выберите шаблон который хотите отправить', reply_markup=get_keyboard('uk_template'))
+                        await MailingAddressState.next()
+                    else:
+                        await message.answer('По данному адресу нет пользователей или же у вас нет доступа на этот адрес', reply_markup=get_keyboard('uk'))
+                        await state.finish()
+                except IndexError:
+                    await message.answer('У вас нет адресов', reply_markup=get_keyboard('uk'))
 
             
         @dp.message_handler(state=MailingAddressState.message_text)
-        async def message_text(message: types.Message, state: FSMContext):
+        async def message_texts(message: types.Message, state: FSMContext):
             async with state.proxy() as data:
                 data['message_text'] = message.text
-                street = data['address']
-                street_parts = street.split(',')
-                street_name = street_parts[0] 
-                house_number = street_parts[1]
-                message_text = data['message_text']
-                template = await get_template_text(message_text)
-                template = ''.join(template)
-                data['message_text'] = template
+                message_text =  data['message_text']
+         
+                templates = await get_template_text(message_text)
+                if templates:
+                    await message.answer('Выберите время начало', reply_markup=time_uk('time'))
+                    await MailingAddressState.next()
+                else:
+                    await message.answer('Такого шаблона нет!', reply_markup=get_keyboard('uk'))
+                    await state.finish()
+           
 
-                msg_id = await get_addres_uk(street_name, house_number)
-                user_id = message.from_user.id
-                response = await get_uk_nick(user_id)
-                nick = ''.join(response)
-                text = f'Сообщение от УК {nick}\n\nДля адреса: {street}\n\nСообщение: {template}'
+        @dp.message_handler(state=MailingAddressState.start_time)
+        async def start_time_func(message: types.Message, state: FSMContext):
+                async with state.proxy() as data:
+                    data['start_time'] = message.text
 
-                # Запрашиваем дату отправки сообщения у пользователя
-                await message.answer('Введите дату отправки сообщения (в формате "ГГГГ-MM-ДД ЧЧ:ММ")', reply_markup=get_keyboard('back_uk'))
+                await message.answer('Выберите время окончания', reply_markup=time_uk('time'))
                 await MailingAddressState.next()
+        
+        @dp.message_handler(state=MailingAddressState.end_time)
+        async def start_time_func(message: types.Message, state: FSMContext):
+                async with state.proxy() as data:
+                    data['end_time'] = message.text
 
-        @dp.message_handler(state=MailingAddressState.date)
-        async def message_date(message: types.Message, state: FSMContext):
-            async with state.proxy() as data:
-                data['date'] = message.text
-                street = data['address']
-                street_parts = street.split(',')
-                street_name = street_parts[0] 
-                house_number = street_parts[1]
                 message_text = data['message_text']
+                street = data['address']
+                start_time = data['start_time']
+                end_time = data['end_time']
+
+                street_parts = street.split(',')
+                street_name, house_number = street_parts[:2]
+                templates = await get_template_text(message_text)
+                for template in templates:
+                    templates = template
                 user_id = message.from_user.id
-                response = await get_uk_nick(user_id)
-                nick = ''.join(response)
-                text = f'Сообщение от УК {nick}\n\nДля адреса: {street}\n\nСообщение: {message_text}'
+                nick = await get_uk_nick(user_id)
+             
+                if nick:
+                    nick = "".join(nick)
+                else:
+                    nick = message.from_user.first_name
+                current_date = datetime.now()
 
-                # Добавляем задачу в планировщик задач
-                try:
-                    date_time = datetime.strptime(data['date'], '%Y-%m-%d %H:%M')
-                except ValueError:
-                    await message.answer('Неправильный формат даты, введите дату в формате\n"ГГГГ-MM-ДД ЧЧ:ММ"', reply_markup=get_keyboard('back_uk'))
-                    return
-
-                # Проверяем, что заданная дата в будущем
-                if date_time < datetime.now():
-                    await message.answer('Вы указали прошедшую дату, введите дату в будущем', reply_markup=get_keyboard('back_uk'))
-                    return
-
-                # определим переменную send_message
+                # Форматирование даты в формате "день-месяц-год"
+                formatted_date = current_date.strftime("%d-%m-%Y")
                 
+                text = f'Сообщение от УК {nick}\n\nУважаемые жильцы, по адресу {street}, {formatted_date} в период с {start_time} по {end_time} {template}'
+              
+
                 msg_id = await get_addres_uk(street_name, house_number)
                 for users_id in msg_id:
-                    
-                    job = scheduler.add_job(
-                        bot.send_message, 
-                        trigger='date',
-                        next_run_time=date_time,
-                        args=[users_id, text],
-                    )
-                
+                    try:
 
+                        await bot.send_message(chat_id=users_id, text=text)
+                    except Exception:
+                        continue
+                await bot.send_message(chat_id=message.from_user.id, text='Сообщение отправлено',reply_markup = get_keyboard('uk'))
 
-                await message.answer(f'Сообщение будет отправлено {data["date"]}', reply_markup = get_keyboard('uk'))
                 await state.finish()
+
+
+            
 
 
 

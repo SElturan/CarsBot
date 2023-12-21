@@ -88,5 +88,9 @@ async def get_uk_nick(user_id):
         async with session.get(f"{rest_api}/address_uk/?user__user_id={user_id}") as resp:
             data =  await resp.json()
             nick = [response['nick'] for response in data]
-            return nick
+            
+            if nick and nick == None:
+                return nick
+            else:
+                return False
         

@@ -72,6 +72,17 @@ async def get_number_car(user_id):
                 return car_number
             else:
                 return False
+    
+async def get_number_car_default(user_id):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f'{rest_api}/number_car/?user__user_id={user_id}&default_num=True') as resp:
+            data = await resp.json()
+            car_number = [response['car_num'] for response in data]
+
+            if car_number:
+                return car_number
+            else:
+                return False
 
 async def get_number_car_check(user_id, car_numbers):
     async with aiohttp.ClientSession() as session:
